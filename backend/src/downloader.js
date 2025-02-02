@@ -5,11 +5,12 @@ const downloadVideo = async (url) => {
     return new Promise((resolve, reject) => {
         
         const ytDlp = spawn('yt-dlp', [
-            '-f', 'b',  
+            '-f', 'b', 
             '-o', '-',  
             url
         ]);
-s
+
+      
         ytDlp.on('error', (err) => {
             console.log("yt-dlp failed, trying Puppeteer...");
             usePuppeteer();
@@ -18,17 +19,15 @@ s
         
         ytDlp.on('exit', (code) => {
             if (code !== 0) {
-                console.log("yt-dlp failed with code   trying Puppeteer...");
+                console.log("yt-dlp failed with code " + code + ", trying Puppeteer...");
                 usePuppeteer();
             }
         });
 
-        
         ytDlp.stderr.on('data', (data) => {
             console.log('yt-dlp stderr:', data.toString());
         });
 
-        
         if (ytDlp.stdout) {
             resolve({ stream: ytDlp.stdout, usePuppeteer: false });
         }
