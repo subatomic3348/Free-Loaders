@@ -12,7 +12,7 @@ app.post("/download", async (req, res) => {
 
     try {
         const filePath = await downloadVideo(url);
-        res.download(filePath); // Sends the video file to the client
+        res.download(filePath); 
     } catch (error) {
         res.status(500).json({ error: "Failed to download video" });
     }
