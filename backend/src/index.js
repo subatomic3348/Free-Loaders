@@ -11,9 +11,32 @@ app.post("/download", async (req, res) => {
     if (!url) return res.status(400).json({ error: "URL is required" });
 
     try {
-        const filePath = await downloadVideo(url);
-        res.download(filePath); 
+        const result = await downloadVideo(url);
+        
+        if (result.usePuppeteer) {
+            return res.redirect(result.videoSrc);
+        } else {
+            
+            const filename = `video-${Date.now()}.mp4`;
+            res.setHeader('Content-Type', 'video/mp4');
+            res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
+            
+            
+            result.stream.on('end', () => {
+                console.log('Stream ended');
+                res.end();
+            });
+            
+            result.stream.on('error', (error) => {
+                console.error('Stream error:', error);
+                res.status(500).send('Stream error occurred');
+            });
+
+           
+            result.stream.pipe(res);
+        }
     } catch (error) {
+        console.error('Download error:', error);
         res.status(500).json({ error: "Failed to download video" });
     }
 });

@@ -1,25 +1,55 @@
-const { exec } = require("child_process");
+const { spawn } = require("child_process");
 const puppeteer = require("puppeteer");
-const path = require("path");
-const fs = require("fs");
-
-const DOWNLOAD_DIR = path.join(__dirname, "../downloads");
-if (!fs.existsSync(DOWNLOAD_DIR)) fs.mkdirSync(DOWNLOAD_DIR);
 
 const downloadVideo = async (url) => {
-    const fileName = `video_${Date.now()}.mp4`;
-    const filePath = path.join(DOWNLOAD_DIR, fileName);
-
     return new Promise((resolve, reject) => {
         
-        exec(`yt-dlp -f best -o "${filePath}" "${url}"`, async (err) => {
-            if (!err) return resolve(filePath);
-
+        const ytDlp = spawn('yt-dlp', [
+            '-f', 'b',  
+            '-o', '-',  
+            url
+        ]);
+s
+        ytDlp.on('error', (err) => {
             console.log("yt-dlp failed, trying Puppeteer...");
+            usePuppeteer();
+        });
+
+        
+        ytDlp.on('exit', (code) => {
+            if (code !== 0) {
+                console.log("yt-dlp failed with code " + code + ", trying Puppeteer...");
+                usePuppeteer();
+            }
+        });
+
+        
+        ytDlp.stderr.on('data', (data) => {
+            console.log('yt-dlp stderr:', data.toString());
+        });
+
+        
+        if (ytDlp.stdout) {
+            resolve({ stream: ytDlp.stdout, usePuppeteer: false });
+        }
+
+        async function usePuppeteer() {
             try {
-                const browser = await puppeteer.launch();
+                const browser = await puppeteer.launch({
+                    headless: 'new',
+                    args: ['--no-sandbox', '--disable-setuid-sandbox']
+                });
                 const page = await browser.newPage();
-                await page.goto(url, { waitUntil: "networkidle2" });
+                
+                try {
+                    await page.goto(url, { 
+                        waitUntil: "networkidle2",
+                        timeout: 30000
+                    });
+                } catch (error) {
+                    await browser.close();
+                    return reject("Failed to load page: " + error.message);
+                }
 
                 const videoSrc = await page.evaluate(() => {
                     const video = document.querySelector("video");
@@ -27,17 +57,16 @@ const downloadVideo = async (url) => {
                 });
 
                 await browser.close();
+                
+                if (!videoSrc) {
+                    return reject("No video found on page");
+                }
 
-                if (!videoSrc) return reject("No video found");
-
-                exec(`ffmpeg -i "${videoSrc}" -c copy "${filePath}"`, (ffmpegErr) => {
-                    if (ffmpegErr) return reject("FFmpeg failed");
-                    resolve(filePath);
-                });
+                resolve({ videoSrc, usePuppeteer: true });
             } catch (puppeteerError) {
-                reject("Puppeteer failed");
+                reject("Puppeteer error: " + puppeteerError.message);
             }
-        });
+        }
     });
 };
 
