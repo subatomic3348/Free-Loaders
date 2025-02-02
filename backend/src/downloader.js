@@ -18,7 +18,7 @@ s
         
         ytDlp.on('exit', (code) => {
             if (code !== 0) {
-                console.log("yt-dlp failed with code " + code + ", trying Puppeteer...");
+                console.log("yt-dlp failed with code   trying Puppeteer...");
                 usePuppeteer();
             }
         });

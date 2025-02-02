@@ -23,12 +23,11 @@ app.post("/download", async (req, res) => {
             
             
             result.stream.on('end', () => {
-                console.log('Stream ended');
                 res.end();
             });
             
             result.stream.on('error', (error) => {
-                console.error('Stream error:', error);
+              
                 res.status(500).send('Stream error occurred');
             });
 
@@ -36,7 +35,6 @@ app.post("/download", async (req, res) => {
             result.stream.pipe(res);
         }
     } catch (error) {
-        console.error('Download error:', error);
         res.status(500).json({ error: "Failed to download video" });
     }
 });
